@@ -72,6 +72,17 @@ const app = express();
 const port = 5001;
 app.use(express.json());
 
+const winston = require('winston');
+const expressWinston = require('express-winston');
+
+app.use(expressWinston.logger({
+  transports: [
+    new winston.transports.Console()
+  ],
+  format: winston.format.simple(),
+  meta: true,
+}));
+
 app.post('/get_upload_url', async (req: Req<AppCred>, res) => {
   // TODO: Figure out how to make this error if the req body doesn't match the interface we're expecting…
   const authznRes = await b2AuthorizeAccount(req.body);
