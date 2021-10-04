@@ -1,5 +1,1 @@
-#!/usr/bin/env bash
-
-set -euo pipefail
-
-npm start
+.gary/server
