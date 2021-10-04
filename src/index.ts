@@ -89,8 +89,7 @@ app.options('*', async (req: Req<AppCred>, res) => {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
     'Access-Control-Allow-Max-Age': 86400,
-  });
-  res.status(204).send(null);
+  }).status(204).send(null);
 });
 
 app.post('/get_upload_url', async (req: Req<AppCred>, res) => {
