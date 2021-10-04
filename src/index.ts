@@ -83,6 +83,16 @@ app.use(expressWinston.logger({
   meta: true,
 }));
 
+app.options('*', async (req: Req<AppCred>, res) => {
+  res.set({
+    'Access-Control-Allow-Headers': '*',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+    'Access-Control-Allow-Max-Age': 86400,
+  });
+  res.status(204).send(null);
+});
+
 app.post('/get_upload_url', async (req: Req<AppCred>, res) => {
   // TODO: Figure out how to make this error if the req body doesn't match the interface we're expecting…
   const authznRes = await b2AuthorizeAccount(req.body);
