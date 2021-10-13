@@ -7,6 +7,12 @@ interface AppCred {
   key: string;
 };
 
+interface GetUploadUrlParams {
+  apiUrl: string;
+  authorizationToken: string;
+  bucketId: string;
+}
+
 interface UrlParts {
   apiUrl: string; // returned by b2_authorize_account
   versionNumber: number;
@@ -86,15 +92,33 @@ app.use(expressWinston.logger({
 
 app.use(cors());
 
-app.post('/get_upload_url', async (req: Req<AppCred>, res) => {
-  // TODO: Figure out how to make this error if the req body doesn't match the interface we're expecting…
-  const authznRes = await b2AuthorizeAccount(req.body);
+app.post('/authorize_account', async (req: Req<AppCred>, res) => {
+  const b2Res = await b2AuthorizeAccount(req.body);
   const {
     allowed: { bucketId },
     apiUrl,
     authorizationToken,
-  } = authznRes.data;
-  const uploadUrlRes = await b2GetUploadUrl(
+  } = b2Res.data;
+
+  const _links = {
+    getUploadUrl: {
+      rel: 'getUploadUrl',
+      href:  '/get_upload_url',
+      method: 'POST',
+    },
+  };
+
+  res.status(200).send({
+    _links,
+    apiUrl,
+    authorizationToken,
+    bucketId
+  });
+});
+
+app.post('/get_upload_url', async (req: Req<GetUploadUrlParams>, res) => {
+  const { apiUrl, authorizationToken, bucketId } = req.body;
+  const b2Res = await b2GetUploadUrl(
     {
       apiUrl,
       versionNumber: 2,
@@ -104,7 +128,20 @@ app.post('/get_upload_url', async (req: Req<AppCred>, res) => {
     bucketId
   );
 
-  res.status(200).send(uploadUrlRes.data as B2GetUploadUrlResponse);
+  const _links = {
+    uploadFile: {
+      rel: 'uploadFile',
+      href: b2Res.data.uploadUrl,
+      method: 'POST',
+    },
+  };
+
+  res.status(200).send(
+    {
+      _links,
+      ...b2Res.data
+    }
+  );
 });
 
 app.listen(port, () => console.log(`Running on port ${port}`));
