@@ -26,6 +26,6 @@ export function mkLinks<Rel extends string>(partialLinks: SansRels<Rel>): Links<
   ) as Links<Rel>;
 }
 
-export function hasLinks<Rel extends string,>(links: SansRels<Rel>): HasLinks<Rel> {
+export function _links<Rel extends string,>(links: SansRels<Rel>): HasLinks<Rel> {
   return { _links: mkLinks(links) };
 }
