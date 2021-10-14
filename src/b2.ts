@@ -18,6 +18,7 @@ export interface B2AccountAuthorization {
   allowed: { bucketId: string };
   apiUrl: string;
   authorizationToken: string;
+  downloadUrl: string;
 };
 
 export interface B2GetUploadUrlResponse {

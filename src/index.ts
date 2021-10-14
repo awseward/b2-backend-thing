@@ -33,7 +33,7 @@ const post = <TReq, TRes>(route: string, cb: CB<TReq, TRes>) =>
 
 type AccountAuthorizationParams = AppCred;
 type AccountAuthorization =
-  Pick<B2AccountAuthorization, 'apiUrl'|'authorizationToken'>
+  Pick<B2AccountAuthorization, 'apiUrl'|'authorizationToken'|'downloadUrl'>
   & { bucketId: string; }
   & HasLinks<'getUploadUrl'>;
 
@@ -44,6 +44,7 @@ post<AccountAuthorizationParams, AccountAuthorization>(
       allowed: { bucketId },
       apiUrl,
       authorizationToken,
+      downloadUrl,
     } = await b2.authorizeAccount(reqBody);
     ok({
       ..._links({
@@ -54,7 +55,8 @@ post<AccountAuthorizationParams, AccountAuthorization>(
       }),
       apiUrl,
       authorizationToken,
-      bucketId
+      bucketId,
+      downloadUrl,
     });
   }
 );
