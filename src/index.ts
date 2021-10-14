@@ -2,16 +2,11 @@ import axios from 'axios';
 import cors from 'cors';
 import express from 'express'
 
-interface AppCred {
-  keyId: string;
-  key: string;
-};
-
-interface GetUploadUrlParams {
-  apiUrl: string;
-  authorizationToken: string;
-  bucketId: string;
-}
+import winston from 'winston';
+import expressWinston from 'express-winston';
+// Was previously:
+// const winston = require('winston');
+// const expressWinston = require('express-winston');
 
 interface UrlParts {
   apiUrl: string; // returned by b2_authorize_account
@@ -43,8 +38,19 @@ const handleAxiosError = (e: any) => {
   throw e;
 }
 
-const b2AuthorizeAccount = ({ keyId, key }: AppCred) : Promise<any> =>
-  axios.get(
+interface AppCred {
+  keyId: string;
+  key: string;
+};
+
+interface B2AccountAuthorization {
+  allowed: { bucketId: string };
+  apiUrl: string;
+  authorizationToken: string;
+};
+
+const b2AuthorizeAccount = ({ keyId, key }: AppCred) =>
+  axios.get<B2AccountAuthorization>(
     'https://api.backblazeb2.com/b2api/v2/b2_authorize_account',
     {
       auth: {
@@ -52,7 +58,7 @@ const b2AuthorizeAccount = ({ keyId, key }: AppCred) : Promise<any> =>
         password: key
       }
     }
-  ).catch(handleAxiosError);
+  ).catch(handleAxiosError).then(res => res.data);
 
 interface B2GetUploadUrlResponse {
   authorizationToken: string,
@@ -61,26 +67,22 @@ interface B2GetUploadUrlResponse {
 }
 
 const b2GetUploadUrl = (
-  urlParts: UrlParts,
+  urlParts: Pick<UrlParts, 'apiUrl'|'versionNumber'>,
   authToken: string,
   bucketId: string
-) : Promise<any> =>
-  axios.post(
+) =>
+  axios.post<B2GetUploadUrlResponse>(
     mkB2Url({ ...urlParts, apiName: 'b2_get_upload_url' }),
     { bucketId },
-    {
-      headers: { 'Authorization': authToken },
-    }
-  ).catch(handleAxiosError);
+    { headers: { 'Authorization': authToken }, }
+  ).catch(handleAxiosError).then(res => res.data);
 
 interface Req<T> extends express.Request { body: T }
+type Res<T> = express.Response<T, Record<string, any>>;
 
 const app = express();
 const port = 5001;
 app.use(express.json());
-
-const winston = require('winston');
-const expressWinston = require('express-winston');
 
 app.use(expressWinston.logger({
   transports: [
@@ -89,16 +91,15 @@ app.use(expressWinston.logger({
   format: winston.format.simple(),
   meta: true,
 }));
-
 app.use(cors());
 
-app.post('/authorize_account', async (req: Req<AppCred>, res) => {
-  const b2Res = await b2AuthorizeAccount(req.body);
+// FIXME: Change `Res<object>` to an actually useful type
+app.post('/authorize_account', async ({ body: reqBody }: Req<AppCred>, res: Res<any>) => {
   const {
     allowed: { bucketId },
     apiUrl,
     authorizationToken,
-  } = b2Res.data;
+  } = await b2AuthorizeAccount(reqBody);
 
   const _links = {
     getUploadUrl: {
@@ -116,22 +117,23 @@ app.post('/authorize_account', async (req: Req<AppCred>, res) => {
   });
 });
 
-app.post('/get_upload_url', async (req: Req<GetUploadUrlParams>, res) => {
-  const { apiUrl, authorizationToken, bucketId } = req.body;
+interface GetUploadUrlParams {
+  apiUrl: string;
+  authorizationToken: string;
+  bucketId: string;
+}
+// FIXME: Change `Res<object>` to an actually useful type
+app.post('/get_upload_url', async ({ body: reqBody }: Req<GetUploadUrlParams>, res: Res<object>) => {
+  const { apiUrl, authorizationToken, bucketId } = reqBody;
   const b2Res = await b2GetUploadUrl(
-    {
-      apiUrl,
-      versionNumber: 2,
-      apiName: '', // Not actually used in this call -- probably going to remove from the interface and shape things a little differently…
-    },
+    { apiUrl, versionNumber: 2, },
     authorizationToken,
     bucketId
   );
-
   const _links = {
     uploadFile: {
       rel: 'uploadFile',
-      href: b2Res.data.uploadUrl,
+      href: b2Res.uploadUrl,
       method: 'POST',
     },
   };
@@ -139,7 +141,7 @@ app.post('/get_upload_url', async (req: Req<GetUploadUrlParams>, res) => {
   res.status(200).send(
     {
       _links,
-      ...b2Res.data
+      ...b2Res
     }
   );
 });
