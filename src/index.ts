@@ -38,7 +38,7 @@ type AccountAuthorization =
   & HasLinks<'getUploadUrl'>;
 
 post<AccountAuthorizationParams, AccountAuthorization>(
-  '/authorize_account',
+  '/api/authorize_account',
   async (reqBody, ok) => {
     const {
       allowed: { bucketId },
@@ -49,7 +49,7 @@ post<AccountAuthorizationParams, AccountAuthorization>(
     ok({
       ..._links({
         getUploadUrl: {
-          href: '/get_upload_url',
+          href: '/api/get_upload_url',
           method: 'POST',
         }
       }),
@@ -68,23 +68,26 @@ interface UploadInfoParams {
 }
 type UploadInfo = B2GetUploadUrlResponse & HasLinks<'uploadFile'>;
 
-post<UploadInfoParams, UploadInfo>('/get_upload_url', async (reqBody, ok) => {
-  const { apiUrl, authorizationToken, bucketId } = reqBody;
-  const b2Res = await b2.getUploadUrl(
-    { apiUrl, versionNumber: 2, },
-    authorizationToken,
-    bucketId
-  );
+post<UploadInfoParams, UploadInfo>(
+  '/api/get_upload_url',
+  async (reqBody, ok) => {
+    const { apiUrl, authorizationToken, bucketId } = reqBody;
+    const b2Res = await b2.getUploadUrl(
+      { apiUrl, versionNumber: 2, },
+      authorizationToken,
+      bucketId
+    );
 
-  ok({
-    ..._links({
-      uploadFile: {
-        href: b2Res.uploadUrl,
-        method: 'POST',
-      }
-    }),
-    ...b2Res,
-  });
-});
+    ok({
+      ..._links({
+        uploadFile: {
+          href: b2Res.uploadUrl,
+          method: 'POST',
+        }
+      }),
+      ...b2Res,
+    });
+  }
+);
 
 app.listen(port, () => console.log(`Running on port ${port}`));
