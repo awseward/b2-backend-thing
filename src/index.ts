@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express from 'express'
 import expressWinston from 'express-winston';
+import path from 'path';
 import winston from 'winston';
 import b2, { AppCred, B2AccountAuthorization, B2GetUploadUrlResponse }  from './b2';
 import { HasLinks, _links } from './links';
@@ -89,5 +90,49 @@ post<UploadInfoParams, UploadInfo>(
     });
   }
 );
+
+// === BEGIN Quick & dirty client deploy
+app.use(express.static(path.join(__dirname, 'public')))
+app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
+//
+// `index.html`:
+//
+// > <!DOCTYPE html>
+// > <html lang='en'>
+// >   <head>
+// >     <meta charset='utf-8'>
+// >     <meta name='viewport' content='width=device-width,initial-scale=1'>
+// >
+// >     <title>File Drop</title>
+// >
+// >     <link rel='apple-touch-icon' sizes='180x180' href='/apple-touch-icon.png'>
+// >     <link rel='icon' type='image/png' sizes='32x32' href='/favicon-32x32.png'>
+// >     <link rel='icon' type='image/png' sizes='16x16' href='/favicon-16x16.png'>
+// >     <link rel='manifest' href='/site.webmanifest'>
+// >
+// >     <link rel='stylesheet' href='/global.css'>
+// >     <link rel='stylesheet' href='/build/bundle.css'>
+// >
+// >     <script defer src='/build/bundle.js'></script>
+// >   </head>
+// >
+// >   <body>
+// >   </body>
+// > </html>
+//
+// Which expects the following in the app root:
+//
+//   dist
+//   |-- index.html
+//   | …
+//   |-- public
+//   |   |-- build
+//   |   |   |-- bundle.css
+//   |   |   `-- bundle.js
+//   |   `-- global.css
+//   | …
+//   `-- …
+
+// === END Quick & dirty client deploy ===
 
 app.listen(port, () => console.log(`Running on port ${port}`));
